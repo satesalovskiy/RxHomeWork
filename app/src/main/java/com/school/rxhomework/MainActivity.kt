@@ -39,8 +39,13 @@ class MainActivity : AppCompatActivity() {
                 }
             }
 
+            viewModel.getPostsObserver.onNext(Unit)
         }
     }
+
+
+
+
 
 
     class Adapter : ListAdapter<Adapter.Item, Adapter.Holder>(DiffCallback) {
