@@ -1,6 +1,7 @@
 package com.school.rxhomework
 
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.activity.viewModels
@@ -9,8 +10,11 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.gson.annotations.SerializedName
+import com.jakewharton.rxbinding4.swiperefreshlayout.refreshes
 import com.school.rxhomework.databinding.ActivityMainBinding
 import com.school.rxhomework.databinding.ItemHolderBinding
+import io.reactivex.rxjava3.android.plugins.RxAndroidPlugins
+import io.reactivex.rxjava3.disposables.CompositeDisposable
 
 class MainActivity : AppCompatActivity() {
 
@@ -22,6 +26,9 @@ class MainActivity : AppCompatActivity() {
         ActivityMainBinding.inflate(layoutInflater).apply {
             setContentView(root)
             recyclerView.adapter = adapter
+
+            root.refreshes().subscribe(viewModel.getPostsObserver)
+
             viewModel.state.observe(this@MainActivity) { state ->
                 when (state) {
                     State.Loading -> root.isRefreshing = true
@@ -31,9 +38,10 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
             }
-            root.setOnRefreshListener { viewModel.processAction(Action.RefreshData) }
+
         }
     }
+
 
     class Adapter : ListAdapter<Adapter.Item, Adapter.Holder>(DiffCallback) {
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): Holder {
@@ -44,8 +52,15 @@ class MainActivity : AppCompatActivity() {
             holder.bind(getItem(position))
         }
 
-        class Holder(private val binding: ItemHolderBinding) : RecyclerView.ViewHolder(binding.root) {
-            constructor(parent: ViewGroup) : this(ItemHolderBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+        class Holder(private val binding: ItemHolderBinding) :
+            RecyclerView.ViewHolder(binding.root) {
+            constructor(parent: ViewGroup) : this(
+                ItemHolderBinding.inflate(
+                    LayoutInflater.from(
+                        parent.context
+                    ), parent, false
+                )
+            )
 
             fun bind(item: Item) {
                 binding.apply {

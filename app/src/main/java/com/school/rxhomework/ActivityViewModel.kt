@@ -1,8 +1,13 @@
 package com.school.rxhomework
 
+import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
+import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
+import io.reactivex.rxjava3.core.Observer
+import io.reactivex.rxjava3.schedulers.Schedulers
+import io.reactivex.rxjava3.subjects.PublishSubject
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
@@ -12,29 +17,33 @@ class ActivityViewModel : ViewModel() {
     val state: LiveData<State>
         get() = _state
 
-    private val callback = object : Callback<List<MainActivity.Adapter.Item>> {
-        override fun onResponse(call: Call<List<MainActivity.Adapter.Item>>, response: Response<List<MainActivity.Adapter.Item>>) {
-            if (response.isSuccessful) {
-                response.body()?.let { _state.value = State.Loaded(it) }
-            }
-        }
-
-        override fun onFailure(call: Call<List<MainActivity.Adapter.Item>>, t: Throwable) {
-            _state.value = State.Loaded(emptyList())
-        }
-    }
+    private val getPostsSubject = PublishSubject.create<Unit>()
+    val getPostsObserver: Observer<Unit> = getPostsSubject
 
     init {
         refreshData()
     }
 
     private fun refreshData() {
-        Repository.getPosts(callback)
-    }
+        getPostsSubject
+            .doOnError {
+                _state.value = State.Loaded(emptyList())
+            }
+            .switchMap {
+                Repository.getPosts()
+            }
+            .subscribeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribe {
+                _state.postValue(State.Loaded(it))
+            }
 
-    fun processAction(action: Action) {
-        when (action) {
-            Action.RefreshData -> refreshData()
-        }
+
+//        Repository.getPosts()
+//            .subscribeOn(Schedulers.io())
+//            .observeOn(AndroidSchedulers.mainThread())
+//            .subscribe {
+//                _state.postValue(State.Loaded(it))
+//            }
     }
 }
